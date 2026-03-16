@@ -6,3 +6,7 @@ __pycache__/
 *.pyc
 secret.json
 *.json.key
+*.csv
+*.mp4
+.claude/
+media/outreach_plan.md
