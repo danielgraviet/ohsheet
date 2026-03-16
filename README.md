@@ -1,48 +1,55 @@
-# SheetHappens
+# OhSheet
 
-Lightweight Canvas-to-Google-Sheets automation service.
+Turn Canvas chaos into one calm Google Sheet. OhSheet watches your classes, pulls upcoming assignments, and drops them into a spreadsheet so you and your study group always know what’s due next.
 
-## Prerequisites
+## What students get
+- One living spreadsheet of all assignments across courses
+- Auto-deduped entries (no more duplicate tasks)
+- Built for teams: share the sheet, add filters, sort by due date
+- Free during early access — just star the repo and follow along
 
-- `uv` installed
+## How to try it locally
+If you’re comfortable running Python, you can spin up the service in a few minutes:
+
+1) Install prerequisites
+- `uv`
 - Python `3.13` (managed via `.python-version`)
 
-## Quickstart (uv)
+2) Install dependencies and start the API
 
 ```bash
-# create/update virtualenv and install dependencies from pyproject.toml
-uv sync
-
-# run the FastAPI service (with reload)
-uv run python main.py
-# or directly with uvicorn
+uv sync               # create/update virtualenv
+uv run python main.py # run FastAPI with reload
+# or
 uv run uvicorn app.main:app --reload
 ```
 
-## Environment Variables
+3) Point it at your accounts with a `.env` file
 
-Create `.env` and set:
+```
+CANVAS_TOKEN=...
+CANVAS_DOMAIN=...
+SPREADSHEET_ID=...
+REDIS_URL=...
+GOOGLE_CREDS_JSON=...
+```
 
-- `CANVAS_TOKEN`
-- `CANVAS_DOMAIN`
-- `SPREADSHEET_ID`
-- `REDIS_URL`
-- `GOOGLE_CREDS_JSON`
+That’s it — your assignments will start flowing into the sheet you specify.
 
-## Dependency Management (uv)
+## Want to contribute?
+- Star the repo to follow updates and cheer the project on.
+- Open an issue if you hit a snag or have a student-life feature idea.
+
+## For developers
+
+- Dependency management (uv):
 
 ```bash
-# add packages
-uv add fastapi uvicorn redis httpx google-api-python-client google-auth
-
-# remove a package
+uv add <package>
 uv remove <package>
 ```
 
-## Project Goal
-
-The service will:
-
+### How it works
 1. Fetch upcoming assignments from Canvas.
 2. Normalize payloads through an adapter layer.
 3. Deduplicate by `assignment_id` using Upstash Redis.
