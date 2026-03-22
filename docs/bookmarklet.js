@@ -11,7 +11,7 @@
 //   Click the bookmark — a popup will confirm how many assignments were synced.
 
 (function () {
-  var BACKEND_URL = "https://YOUR_RAILWAY_URL";
+  var BACKEND_URL = "https://ohsheet-production.up.railway.app";
 
   if (typeof courseInformation === "undefined" || !Array.isArray(courseInformation)) {
     alert("SheetHappens: Not on the Learning Suite schedule page.\nNavigate to the Schedule tab and try again.");
