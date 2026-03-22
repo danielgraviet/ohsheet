@@ -18,6 +18,8 @@ curl http://localhost:8000/format
 
 # Or with a custom lookahead window (default is 30 days)
 curl "http://localhost:8000/sync?days=7"
+
+ curl "https://ohsheet-production.up.railway.app/sync?days=7"
 ```
 
 **Clear Cache:**

@@ -32,6 +32,7 @@ _COURSE_COLORS: dict[str, dict] = {
     "REL":      {"red": 0.85, "green": 0.73, "blue": 0.95},  # lavender
     "MATH 112": {"red": 0.68, "green": 0.85, "blue": 0.95},  # sky blue
     "CS 180":   {"red": 0.71, "green": 0.90, "blue": 0.72},  # mint green
+    "CS 270":   {"red": 0.99, "green": 0.88, "blue": 0.68},  # warm amber
 }
 
 
