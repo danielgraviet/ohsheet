@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     spreadsheet_id: str
     redis_url: str
     google_creds_json: str
+    local_timezone: str = "America/Denver"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

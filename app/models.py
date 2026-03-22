@@ -8,3 +8,4 @@ class Assignment(BaseModel):
     assignment_name: str
     due_at: datetime | None
     url: str
+    source: str = "Canvas"  # "Canvas" | "Learning Suite"

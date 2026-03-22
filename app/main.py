@@ -4,12 +4,14 @@ from datetime import date
 
 import redis
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.adapter import AssignmentAdapter
 from app.canvas_client import CanvasAuthError, CanvasAPIError, CanvasClient
 from app.config import settings
 from app.idempotency import IdempotencyService
+from app.ls_adapter import LearningSuiteAdapter
 from app.sheets_client import SheetsAPIError, SheetsAuthError, SheetsClient
 
 logging.basicConfig(
@@ -19,6 +21,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SheetHappens", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://learningsuite.byu.edu"],
+    allow_methods=["POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 class SyncResult(BaseModel):
@@ -154,3 +163,53 @@ def sync(
         newly_inserted=inserted,
         failures=failures,
     )
+
+
+class LearningSuiteSyncRequest(BaseModel):
+    courses: list[dict]
+    page_url: str = ""
+
+
+class LearningSuiteSyncResult(BaseModel):
+    status: str
+    synced: int
+    skipped: int
+    failures: int
+
+
+@app.post("/sync/learning-suite", response_model=LearningSuiteSyncResult)
+def sync_learning_suite(payload: LearningSuiteSyncRequest) -> LearningSuiteSyncResult:
+    logger.info("Learning Suite sync started (%d course(s)).", len(payload.courses))
+
+    try:
+        sheets = SheetsClient()
+        redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+        idempotency = IdempotencyService(redis_client)
+    except Exception as exc:
+        logger.error("Failed to initialise clients for LS sync: %s", exc)
+        return LearningSuiteSyncResult(status="error", synced=0, skipped=0, failures=1)
+
+    assignments = LearningSuiteAdapter().adapt_many(payload.courses, page_url=payload.page_url)
+    logger.info("Adapted %d LS assignments.", len(assignments))
+
+    synced = 0
+    skipped = 0
+    failures = 0
+
+    for assignment in assignments:
+        try:
+            if idempotency.seen(assignment.assignment_id):
+                skipped += 1
+                continue
+            sheets.append_rows([assignment])
+            idempotency.mark_seen(assignment.assignment_id)
+            synced += 1
+        except (SheetsAPIError, SheetsAuthError) as exc:
+            logger.error("Failed to write LS assignment %s: %s", assignment.assignment_id, exc)
+            failures += 1
+        except Exception as exc:
+            logger.error("Unexpected error for LS assignment %s: %s", assignment.assignment_id, exc)
+            failures += 1
+
+    logger.info("LS sync complete — synced=%d skipped=%d failures=%d", synced, skipped, failures)
+    return LearningSuiteSyncResult(status="ok", synced=synced, skipped=skipped, failures=failures)

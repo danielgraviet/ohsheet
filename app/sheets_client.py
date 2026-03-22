@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -16,8 +17,8 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SHEET_RANGE = "Sheet1!A1"
 
 # Column A is a checkbox (Done); data columns start at B.
-COLUMNS = ["done", "course_name", "assignment_name", "due_at", "days_left", "url"]
-HEADERS = ["Done", "Course", "Assignment", "Due Date", "Days Left", "Link"]
+COLUMNS = ["done", "course_name", "assignment_name", "due_at", "days_left", "url", "source"]
+HEADERS = ["Done", "Course", "Assignment", "Due Date", "Days Left", "Link", "Source"]
 
 # Last synced timestamp is written here — outside the data table
 _LAST_SYNCED_CELL = "Sheet1!H1"
@@ -138,9 +139,10 @@ class SheetsClient:
     def _ensure_headers(self) -> None:
         """Write the header row to A1 if the sheet is empty, then apply formatting."""
         try:
+            last_col = chr(ord("A") + len(HEADERS) - 1)
             result = self._service.spreadsheets().values().get(
                 spreadsheetId=self._spreadsheet_id,
-                range="Sheet1!A1:F1",
+                range=f"Sheet1!A1:{last_col}1",
             ).execute()
             if result.get("values"):
                 return
@@ -433,9 +435,14 @@ class SheetsClient:
 
     def _to_row(self, assignment: Assignment) -> list[str]:
         """Serialize an Assignment to a Sheets row following COLUMNS order."""
-        # Write as YYYY-MM-DD — Sheets parses this as a native date value,
-        # which enables the calendar picker when editing the cell.
-        due_str = assignment.due_at.strftime("%Y-%m-%d") if assignment.due_at else ""
+        # Convert UTC → local timezone before formatting so the displayed date
+        # matches the calendar date in the user's timezone, not UTC.
+        if assignment.due_at:
+            local_tz = ZoneInfo(settings.local_timezone)
+            due_local = assignment.due_at.astimezone(local_tz)
+            due_str = due_local.strftime("%Y-%m-%d")
+        else:
+            due_str = ""
 
         url = assignment.url
         if url and url.startswith("/"):
@@ -452,4 +459,5 @@ class SheetsClient:
             due_str,
             '=IF(INDIRECT("D"&ROW())="","",INDIRECT("D"&ROW())-TODAY())',  # Days Left — blank if no due date
             link,
+            assignment.source,
         ]
