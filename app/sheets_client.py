@@ -11,6 +11,14 @@ from googleapiclient.errors import HttpError
 from app.config import settings
 from app.models import Assignment
 
+OAUTH_SCOPES = [
+    "openid",
+    "email",
+    "profile",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
+]
+
 logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -48,6 +56,7 @@ class SheetsClient:
     def __init__(self, dry_run: bool = False) -> None:
         self._spreadsheet_id = settings.spreadsheet_id
         self._dry_run = dry_run
+        self._canvas_domain = settings.canvas_domain
         self._service = self._build_service()
 
     def _build_service(self) -> Any:
@@ -447,7 +456,7 @@ class SheetsClient:
 
         url = assignment.url
         if url and url.startswith("/"):
-            domain = settings.canvas_domain.rstrip("/")
+            domain = self._canvas_domain.rstrip("/")
             if not domain.startswith("http"):
                 domain = f"https://{domain}"
             url = f"{domain}{url}"
@@ -462,3 +471,63 @@ class SheetsClient:
             link,
             assignment.source,
         ]
+
+
+# ── Per-user OAuth-based client ──────────────────────────────────────────────
+
+def _build_user_service(access_token: str, refresh_token: str, token_expires_at: Any) -> tuple[Any, Any]:
+    """Build a Sheets service using per-user OAuth credentials. Returns (service, credentials)."""
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+
+    creds = Credentials(
+        token=access_token,
+        refresh_token=refresh_token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.google_oauth_client_id,
+        client_secret=settings.google_oauth_client_secret,
+        scopes=OAUTH_SCOPES,
+        expiry=token_expires_at,
+    )
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    return build("sheets", "v4", credentials=creds), creds
+
+
+def create_user_spreadsheet(
+    access_token: str, refresh_token: str, token_expires_at: Any = None
+) -> tuple[str, Any]:
+    """Create an OhSheet spreadsheet for a user. Returns (spreadsheet_id, credentials)."""
+    service, creds = _build_user_service(access_token, refresh_token, token_expires_at)
+    year = datetime.now(timezone.utc).year
+    result = (
+        service.spreadsheets()
+        .create(body={"properties": {"title": f"OhSheet {year}"}}, fields="spreadsheetId")
+        .execute()
+    )
+    spreadsheet_id = result["spreadsheetId"]
+    logger.info("Created spreadsheet %s for new user.", spreadsheet_id)
+    return spreadsheet_id, creds
+
+
+class UserSheetsClient(SheetsClient):
+    """SheetsClient backed by per-user OAuth credentials instead of a service account."""
+
+    def __init__(
+        self,
+        spreadsheet_id: str,
+        access_token: str,
+        refresh_token: str,
+        token_expires_at: Any = None,
+        canvas_domain: str = "",
+    ) -> None:
+        self._spreadsheet_id = spreadsheet_id
+        self._dry_run = False
+        self._canvas_domain = canvas_domain or settings.canvas_domain
+        self._service, self.refreshed_creds = _build_user_service(
+            access_token, refresh_token, token_expires_at
+        )
+
+    # Override _build_service so the parent __init__ is not called.
+    def _build_service(self) -> Any:  # pragma: no cover
+        raise NotImplementedError("UserSheetsClient uses _build_user_service")

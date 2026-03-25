@@ -25,13 +25,14 @@ class CanvasAPIError(Exception):
 
 
 class CanvasClient:
-    def __init__(self) -> None:
-        domain = settings.canvas_domain.rstrip("/")
+    def __init__(self, token: str | None = None, domain: str | None = None) -> None:
+        token = token or settings.canvas_token
+        domain = (domain or settings.canvas_domain).rstrip("/")
         if not domain.startswith("http"):
             domain = f"https://{domain}"
         self._base_url = f"{domain}/api/v1"
         self._headers = {
-            "Authorization": f"Bearer {settings.canvas_token}",
+            "Authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
 

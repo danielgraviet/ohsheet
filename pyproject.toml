@@ -13,8 +13,13 @@ dependencies = [
     "httpx>=0.28.1",
     "google-api-python-client>=2.190.0",
     "google-auth>=2.48.0",
+    "google-auth-oauthlib>=1.2.0",
     "redis>=7.2.1",
     "qrcode[pil]>=8.2",
+    "asyncpg>=0.30.0",
+    "cryptography>=43.0.0",
+    "itsdangerous>=2.2.0",
+    "python-multipart>=0.0.9",
 ]
 
 [dependency-groups]

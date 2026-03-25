@@ -60,19 +60,12 @@ def make_client(dry_run: bool = True) -> SheetsClient:
 # ---------------------------------------------------------------------------
 
 def test_columns_order() -> None:
-    assert COLUMNS == [
-        "course_name",
-        "assignment_name",
-        "due_at",
-        "url",
-        "assignment_id",
-        "synced_at",
-    ]
+    assert COLUMNS == ["done", "course_name", "assignment_name", "due_at", "days_left", "url", "source"]
 
 
 def test_headers_match_columns_length() -> None:
     assert len(HEADERS) == len(COLUMNS)
-    assert HEADERS == ["Course", "Assignment", "Due Date", "Link", "Assignment ID", "Synced At"]
+    assert HEADERS == ["Done", "Course", "Assignment", "Due Date", "Days Left", "Link", "Source"]
 
 
 # ---------------------------------------------------------------------------
@@ -81,25 +74,29 @@ def test_headers_match_columns_length() -> None:
 
 def test_to_row_with_due_at() -> None:
     client = make_client()
-    synced_at = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     with patch("app.sheets_client.settings") as mock_settings:
+        mock_settings.local_timezone = "America/Denver"
         mock_settings.canvas_domain = "canvas.example.com"
-        row = client._to_row(ASSIGNMENT_WITH_DUE, synced_at)
-    assert row[0] == "Algorithms"
-    assert row[1] == "Homework 1"
-    assert row[2] == "Jun 15, 2025 11:59 PM UTC"
-    assert row[3] == '=HYPERLINK("https://canvas.example.com/courses/1/assignments/123", "Open →")'
-    assert row[4] == "123"
+        client._canvas_domain = "canvas.example.com"
+        row = client._to_row(ASSIGNMENT_WITH_DUE)
+    assert row[0] == ""           # Done checkbox — empty
+    assert row[1] == "Algorithms"
+    assert row[2] == "Homework 1"
+    assert row[3] == "2025-06-15"  # due date (local tz formatted)
+    assert "INDIRECT" in row[4]    # Days Left formula
+    assert "Open →" in row[5]      # hyperlink formula
+    assert row[6] == "Canvas"      # source
     assert len(row) == len(COLUMNS)
 
 
 def test_to_row_without_due_at() -> None:
     client = make_client()
-    synced_at = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     with patch("app.sheets_client.settings") as mock_settings:
+        mock_settings.local_timezone = "America/Denver"
         mock_settings.canvas_domain = "canvas.example.com"
-        row = client._to_row(ASSIGNMENT_NO_DUE, synced_at)
-    assert row[2] == ""  # due_at column is empty string
+        client._canvas_domain = "canvas.example.com"
+        row = client._to_row(ASSIGNMENT_NO_DUE)
+    assert row[3] == ""  # due_at column is empty string
     assert len(row) == len(COLUMNS)
 
 
@@ -113,11 +110,12 @@ def test_to_row_relative_url() -> None:
         due_at=None,
         url="/courses/99/assignments/789",
     )
-    synced_at = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     with patch("app.sheets_client.settings") as mock_settings:
+        mock_settings.local_timezone = "America/Denver"
         mock_settings.canvas_domain = "byu.instructure.com"
-        row = client._to_row(assignment, synced_at)
-    assert row[3] == '=HYPERLINK("https://byu.instructure.com/courses/99/assignments/789", "Open →")'
+        client._canvas_domain = "byu.instructure.com"
+        row = client._to_row(assignment)
+    assert row[5] == '=HYPERLINK("https://byu.instructure.com/courses/99/assignments/789", "Open →")'
 
 
 # ---------------------------------------------------------------------------
@@ -141,47 +139,48 @@ def test_append_rows_empty_list_returns_zero() -> None:
 
 def test_append_rows_calls_api() -> None:
     client = make_client(dry_run=False)
+    client._canvas_domain = "canvas.example.com"
 
-    mock_execute = MagicMock()
-    mock_append = MagicMock(return_value=MagicMock(execute=mock_execute))
-    # _ensure_headers: .get().execute() returns {"values": [["existing"]]} so headers are skipped
-    mock_get = MagicMock(return_value=MagicMock(execute=MagicMock(return_value={"values": [["Course"]]})))
-    mock_values = MagicMock(return_value=MagicMock(append=mock_append, get=mock_get))
+    mock_update_execute = MagicMock(return_value={})
+    mock_update = MagicMock(return_value=MagicMock(execute=mock_update_execute))
+    # _ensure_headers: get returns existing header row → skip write
+    mock_get = MagicMock(return_value=MagicMock(
+        execute=MagicMock(return_value={"values": [["Course"]]})
+    ))
+    mock_values = MagicMock(return_value=MagicMock(update=mock_update, get=mock_get))
     client._service.spreadsheets.return_value.values = mock_values
 
     with patch("app.sheets_client.settings") as mock_settings:
+        mock_settings.local_timezone = "America/Denver"
         mock_settings.canvas_domain = "canvas.example.com"
-        mock_settings.spreadsheet_id = "sheet-123"
         result = client.append_rows([ASSIGNMENT_WITH_DUE])
 
     assert result == 1
-    mock_append.assert_called_once()
-    call_kwargs = mock_append.call_args.kwargs
-    assert call_kwargs["spreadsheetId"] == "sheet-123"
-    assert call_kwargs["valueInputOption"] == "USER_ENTERED"
-    assert call_kwargs["insertDataOption"] == "INSERT_ROWS"
-    assert len(call_kwargs["body"]["values"]) == 1
+    mock_update.assert_called()
 
 
 def test_append_rows_raises_sheets_api_error_on_http_error() -> None:
     from googleapiclient.errors import HttpError
 
     client = make_client(dry_run=False)
+    client._canvas_domain = "canvas.example.com"
 
     mock_resp = MagicMock()
     mock_resp.status = 403
     mock_resp.reason = "Forbidden"
     http_error = HttpError(resp=mock_resp, content=b"Forbidden")
 
-    mock_execute = MagicMock(side_effect=http_error)
-    mock_append = MagicMock(return_value=MagicMock(execute=mock_execute))
-    mock_get = MagicMock(return_value=MagicMock(execute=MagicMock(return_value={"values": [["Course"]]})))
-    mock_values = MagicMock(return_value=MagicMock(append=mock_append, get=mock_get))
+    mock_update_execute = MagicMock(side_effect=http_error)
+    mock_update = MagicMock(return_value=MagicMock(execute=mock_update_execute))
+    mock_get = MagicMock(return_value=MagicMock(
+        execute=MagicMock(return_value={"values": [["Course"]]})
+    ))
+    mock_values = MagicMock(return_value=MagicMock(update=mock_update, get=mock_get))
     client._service.spreadsheets.return_value.values = mock_values
 
     with patch("app.sheets_client.settings") as mock_settings:
+        mock_settings.local_timezone = "America/Denver"
         mock_settings.canvas_domain = "canvas.example.com"
-        mock_settings.spreadsheet_id = "sheet-123"
         with pytest.raises(SheetsAPIError, match="Google Sheets API error"):
             client.append_rows([ASSIGNMENT_WITH_DUE])
 

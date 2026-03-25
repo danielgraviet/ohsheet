@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OhSheet — Setup</title>
+  <style>
+    :root {
+      --green:  #16a34a;
+      --green-light: #dcfce7;
+      --blue:   #2563eb;
+      --red:    #dc2626;
+      --gray:   #6b7280;
+      --border: #e5e7eb;
+      --bg:     #f9fafb;
+      --white:  #ffffff;
+      --text:   #111827;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; }
+    header p  { color: var(--gray); margin-top: 6px; font-size: 1rem; }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 20px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: white;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-num.done { background: var(--green); }
+    .step-title { font-size: 1.1rem; font-weight: 700; }
+    .step-subtitle { font-size: 0.85rem; color: var(--gray); margin-top: 2px; }
+
+    .connected-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-light);
+      color: var(--green);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    btn, .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-google {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-google svg { flex-shrink: 0; }
+    .btn-copy { background: var(--blue); color: white; font-size: 0.85rem; padding: 7px 14px; }
+    .btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 6px; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: var(--blue); }
+    .form-group { margin-bottom: 14px; }
+    .hint { font-size: 0.78rem; color: var(--gray); margin-top: 4px; }
+    .error { color: var(--red); font-size: 0.85rem; margin-top: 8px; }
+
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: "Fira Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      white-space: pre;
+      overflow-x: auto;
+      max-height: 200px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+
+    .tools-grid { display: flex; flex-direction: column; gap: 20px; }
+    .tool-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .tool-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+    .tool-card p  { font-size: 0.82rem; color: var(--gray); margin-bottom: 14px; }
+
+    .bookmarklet-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f3f4f6;
+      border: 2px dashed #9ca3af;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+      cursor: grab;
+    }
+    .bookmarklet-link:active { cursor: grabbing; }
+
+    .instructions {
+      background: #f0f9ff;
+      border-left: 3px solid var(--blue);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      color: #1e40af;
+      margin-top: 12px;
+    }
+    .instructions ol { padding-left: 18px; }
+    .instructions li { margin-bottom: 3px; }
+
+    .sheet-link { color: var(--blue); text-decoration: none; font-weight: 600; }
+    .sheet-link:hover { text-decoration: underline; }
+
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    #loading { display: none; text-align: center; color: var(--gray); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🗒️ OhSheet</h1>
+  <p>Sync your Canvas &amp; Learning Suite assignments into Google Sheets.</p>
+</header>
+
+<div id="loading">Loading your setup...</div>
+
+<!-- Step 1: Google -->
+<div class="card" id="step1">
+  <div class="step-header">
+    <div class="step-num" id="step1-num">1</div>
+    <div>
+      <div class="step-title">Connect Google Sheets</div>
+      <div class="step-subtitle">We'll create a sheet and store your assignments there.</div>
+    </div>
+  </div>
+  <div id="step1-content">
+    <a href="/auth/google/start" class="btn btn-google">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Connect with Google
+    </a>
+  </div>
+  <div id="step1-connected" style="display:none">
+    <span class="connected-badge">✓ Connected as <span id="google-email"></span></span>
+    &nbsp;
+    <a id="sheet-link" href="#" class="sheet-link" target="_blank">Open your Sheet →</a>
+  </div>
+</div>
+
+<!-- Step 2: Canvas -->
+<div class="card" id="step2">
+  <div class="step-header">
+    <div class="step-num" id="step2-num">2</div>
+    <div>
+      <div class="step-title">Enter Canvas API Token</div>
+      <div class="step-subtitle">Your token is stored encrypted and only used to fetch your assignments.</div>
+    </div>
+  </div>
+  <div id="step2-content">
+    <div class="form-group">
+      <label for="canvas-domain">Canvas Domain</label>
+      <input type="text" id="canvas-domain" placeholder="byu.instructure.com" />
+      <div class="hint">Your school's Canvas URL, e.g. byu.instructure.com</div>
+    </div>
+    <div class="form-group">
+      <label for="canvas-token">Canvas API Token</label>
+      <input type="password" id="canvas-token" placeholder="Paste your token here" />
+      <div class="hint">
+        In Canvas: <strong>Account → Settings → Approved Integrations → + New Access Token</strong>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveCanvas()">Save Canvas Settings</button>
+    <div id="canvas-error" class="error" style="display:none"></div>
+  </div>
+  <div id="step2-connected" style="display:none">
+    <span class="connected-badge">✓ Canvas connected</span>
+    <span id="canvas-domain-display" style="color:var(--gray);font-size:0.85rem;margin-left:8px;"></span>
+    <button class="btn btn-sm" style="margin-left:12px;background:#f3f4f6;border:1px solid var(--border)" onclick="editCanvas()">Change</button>
+  </div>
+</div>
+
+<!-- Step 3: Sync Tools -->
+<div class="card" id="step3">
+  <div class="step-header">
+    <div class="step-num" id="step3-num">3</div>
+    <div>
+      <div class="step-title">Get Your Sync Tools</div>
+      <div class="step-subtitle">One script for Canvas sync in your Sheet, one bookmarklet for Learning Suite.</div>
+    </div>
+  </div>
+  <div id="step3-locked" style="color:var(--gray);font-size:0.9rem;">
+    Complete steps 1 and 2 first.
+  </div>
+  <div id="step3-content" style="display:none" class="tools-grid">
+
+    <!-- GAS Script -->
+    <div class="tool-card">
+      <h3>📊 Canvas Sync — Google Apps Script</h3>
+      <p>Paste this into your Sheet to get a one-click "OhSheet" menu that syncs Canvas assignments.</p>
+      <div class="code-block" id="gas-code">Loading...</div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-copy" onclick="copyGAS()">Copy Script</button>
+      </div>
+      <div class="instructions">
+        <ol>
+          <li>Open your <a id="step3-sheet-link" href="#" target="_blank" class="sheet-link">OhSheet spreadsheet</a></li>
+          <li>Click <strong>Extensions → Apps Script</strong></li>
+          <li>Delete all existing code, paste the script, click Save (💾)</li>
+          <li>Reload your spreadsheet — an <strong>OhSheet</strong> menu appears</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- LS Bookmarklet -->
+    <div class="tool-card">
+      <h3>🔖 Learning Suite Sync — Bookmarklet</h3>
+      <p>Drag this button to your bookmarks bar. Click it while on a Learning Suite course page to sync assignments.</p>
+      <a id="ls-bookmarklet" href="#" class="bookmarklet-link" title="Drag me to your bookmarks bar">
+        📋 OhSheet LS
+      </a>
+      <div class="instructions">
+        <ol>
+          <li>Drag the button above to your <strong>bookmarks bar</strong></li>
+          <li>Go to a Learning Suite course page</li>
+          <li>Click the <strong>OhSheet LS</strong> bookmark</li>
+        </ol>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let me = null;
+
+  async function loadMe() {
+    document.getElementById('loading').style.display = 'block';
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+      me = await r.json();
+    } catch(e) {
+      me = { authenticated: false };
+    }
+    document.getElementById('loading').style.display = 'none';
+    render();
+  }
+
+  function render() {
+    // Step 1
+    if (me.google_connected) {
+      document.getElementById('step1-num').classList.add('done');
+      document.getElementById('step1-num').textContent = '✓';
+      document.getElementById('step1-content').style.display = 'none';
+      document.getElementById('step1-connected').style.display = 'flex';
+      document.getElementById('google-email').textContent = me.google_email || me.email;
+      if (me.spreadsheet_id) {
+        document.getElementById('sheet-link').href =
+          'https://docs.google.com/spreadsheets/d/' + me.spreadsheet_id;
+      }
+    }
+
+    // Step 2
+    if (me.canvas_connected) {
+      document.getElementById('step2-num').classList.add('done');
+      document.getElementById('step2-num').textContent = '✓';
+      document.getElementById('step2-content').style.display = 'none';
+      document.getElementById('step2-connected').style.display = 'flex';
+      document.getElementById('canvas-domain-display').textContent = me.canvas_domain;
+    } else if (me.canvas_domain) {
+      document.getElementById('canvas-domain').value = me.canvas_domain;
+    }
+
+    // Step 3
+    if (me.google_connected && me.canvas_connected) {
+      document.getElementById('step3-locked').style.display = 'none';
+      document.getElementById('step3-content').style.display = 'flex';
+      loadTools();
+    }
+  }
+
+  async function saveCanvas() {
+    const domain = document.getElementById('canvas-domain').value.trim();
+    const token  = document.getElementById('canvas-token').value.trim();
+    const errEl  = document.getElementById('canvas-error');
+    errEl.style.display = 'none';
+
+    if (!domain || !token) {
+      errEl.textContent = 'Please enter both domain and token.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    try {
+      const r = await fetch('/api/setup/canvas', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canvas_domain: domain, canvas_token: token }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        errEl.textContent = data.detail || 'Failed to save. Check your token.';
+        errEl.style.display = 'block';
+        return;
+      }
+      me.canvas_connected = true;
+      me.canvas_domain = domain;
+      render();
+    } catch(e) {
+      errEl.textContent = 'Network error. Try again.';
+      errEl.style.display = 'block';
+    }
+  }
+
+  function editCanvas() {
+    document.getElementById('step2-connected').style.display = 'none';
+    document.getElementById('step2-content').style.display = 'block';
+  }
+
+  async function loadTools() {
+    try {
+      const [gasR, lsR] = await Promise.all([
+        fetch('/api/bookmarklet/gas', { credentials: 'include' }),
+        fetch('/api/bookmarklet/ls',  { credentials: 'include' }),
+      ]);
+      const gasData = await gasR.json();
+      const lsData  = await lsR.json();
+
+      document.getElementById('gas-code').textContent = gasData.script || '';
+
+      const lsBm = document.getElementById('ls-bookmarklet');
+      lsBm.href = lsData.js || 'javascript:void(0)';
+
+      if (me.spreadsheet_id) {
+        document.getElementById('step3-sheet-link').href =
+          'https://docs.google.com/spreadsheets/d/' + me.spreadsheet_id;
+      }
+    } catch(e) {
+      console.error('Failed to load tools', e);
+    }
+  }
+
+  function copyGAS() {
+    const text = document.getElementById('gas-code').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Script', 2000);
+    });
+  }
+
+  // Handle OAuth redirect params
+  const params = new URLSearchParams(location.search);
+  if (params.get('error')) {
+    const msgs = {
+      oauth_denied: 'Google sign-in was cancelled.',
+      invalid_state: 'Security check failed. Please try again.',
+      token_exchange: 'Could not complete Google sign-in.',
+      userinfo: 'Could not read your Google profile.',
+    };
+    alert(msgs[params.get('error')] || 'Something went wrong. Please try again.');
+    history.replaceState({}, '', '/setup');
+  }
+
+  loadMe();
+</script>
+</body>
+</html>
