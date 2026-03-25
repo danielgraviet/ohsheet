@@ -8,6 +8,7 @@ import redis
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.adapter import AssignmentAdapter
@@ -52,6 +53,9 @@ app.include_router(auth_router)
 # ── Setup page ────────────────────────────────────────────────────────────────
 
 _STATIC = Path(__file__).parent / "static"
+_MEDIA = Path(__file__).parent.parent / "media"
+
+app.mount("/media", StaticFiles(directory=_MEDIA), name="media")
 
 
 @app.get("/", response_class=FileResponse)
