@@ -105,7 +105,7 @@ async def google_callback(
     state: str | None = None,
     error: str | None = None,
 ) -> RedirectResponse:
-    setup_url = f"{settings.app_base_url}/setup"
+    setup_url = f"{settings.app_base_url.rstrip('/')}/setup"
 
     if error or not code or not state:
         logger.warning("Google OAuth error: %s", error)
@@ -275,7 +275,7 @@ async def logout(response: Response) -> dict:
 async def get_ls_bookmarklet(ohsheet_session: Annotated[str | None, Cookie()] = None) -> dict:
     user = await require_user(ohsheet_session)
     token = user["sync_token"]
-    api_url = f"{settings.app_base_url}/api/sync/learning-suite"
+    api_url = f"{settings.app_base_url.rstrip('/')}/api/sync/learning-suite"
     # Return the JS source so the setup page can render it as a bookmarklet href
     js = (
         f"javascript:(function(){{"
@@ -302,7 +302,7 @@ async def get_ls_bookmarklet(ohsheet_session: Annotated[str | None, Cookie()] = 
 async def get_gas_script(ohsheet_session: Annotated[str | None, Cookie()] = None) -> dict:
     user = await require_user(ohsheet_session)
     token = user["sync_token"]
-    sync_url = f"{settings.app_base_url}/api/sync/canvas"
+    sync_url = f"{settings.app_base_url.rstrip('/')}/api/sync/canvas"
     script = f"""// OhSheet — Google Apps Script
 // Install: Extensions → Apps Script → paste this → Save → reload the sheet.
 
