@@ -73,6 +73,11 @@ def setup_page() -> FileResponse:
     return FileResponse(_STATIC / "setup.html")
 
 
+@app.get("/privacy", response_class=FileResponse)
+def privacy_page() -> FileResponse:
+    return FileResponse(_STATIC / "privacy.html")
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
