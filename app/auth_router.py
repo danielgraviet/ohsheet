@@ -1,7 +1,10 @@
 """Google OAuth + Canvas setup endpoints for multi-tenant onboarding."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import logging
+import secrets
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -50,6 +53,28 @@ def verify_oauth_state(state: str) -> bool:
         return False
 
 
+# ── PKCE helpers ──────────────────────────────────────────────────────────────
+
+def _generate_code_verifier() -> str:
+    return secrets.token_urlsafe(96)
+
+
+def _compute_code_challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode()).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+
+
+def _sign_pkce(verifier: str) -> str:
+    return _signer().dumps(verifier, salt="pkce-v1")
+
+
+def _unsign_pkce(signed: str) -> str | None:
+    try:
+        return _signer().loads(signed, salt="pkce-v1", max_age=600)
+    except (BadSignature, SignatureExpired):
+        return None
+
+
 # ── Dependency: current user ──────────────────────────────────────────────────
 
 async def require_user(ohsheet_session: Annotated[str | None, Cookie()] = None) -> dict:
@@ -89,14 +114,26 @@ def _oauth_flow(state: str | None = None) -> Flow:
 @router.get("/auth/google/start")
 async def google_start() -> RedirectResponse:
     state = generate_oauth_state()
+    code_verifier = _generate_code_verifier()
     flow = _oauth_flow()
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         prompt="consent",
         state=state,
         include_granted_scopes="true",
+        code_challenge=_compute_code_challenge(code_verifier),
+        code_challenge_method="S256",
     )
-    return RedirectResponse(auth_url)
+    response = RedirectResponse(auth_url)
+    response.set_cookie(
+        "ohsheet_pkce",
+        _sign_pkce(code_verifier),
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=600,
+    )
+    return response
 
 
 @router.get("/auth/google/callback")
@@ -104,6 +141,7 @@ async def google_callback(
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
+    ohsheet_pkce: Annotated[str | None, Cookie()] = None,
 ) -> RedirectResponse:
     setup_url = f"{settings.app_base_url.rstrip('/')}/setup"
 
@@ -115,9 +153,10 @@ async def google_callback(
         logger.warning("Invalid OAuth state parameter")
         return RedirectResponse(f"{setup_url}?error=invalid_state")
 
+    code_verifier = _unsign_pkce(ohsheet_pkce) if ohsheet_pkce else None
     try:
         flow = _oauth_flow(state=state)
-        flow.fetch_token(code=code)
+        flow.fetch_token(code=code, code_verifier=code_verifier)
         creds = flow.credentials
     except Exception as exc:
         logger.error("Token exchange failed: %s", exc)

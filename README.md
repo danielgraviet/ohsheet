@@ -49,6 +49,16 @@ uv add <package>
 uv remove <package>
 ```
 
+- Setup frontend (Vite + React):
+
+```bash
+npm install
+npm run setup:dev
+npm run setup:build
+```
+
+- FastAPI serves the built setup app from `/setup` when [`app/static/setup-app`](/Users/danielgraviet/Desktop/projects/sheethappens/app/static/setup-app) exists, and falls back to [`app/static/setup.html`](/Users/danielgraviet/Desktop/projects/sheethappens/app/static/setup.html) otherwise.
+
 ### How it works
 1. Fetch upcoming assignments from Canvas.
 2. Normalize payloads through an adapter layer.

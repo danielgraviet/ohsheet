@@ -54,8 +54,10 @@ app.include_router(auth_router)
 
 _STATIC = Path(__file__).parent / "static"
 _MEDIA = Path(__file__).parent.parent / "media"
+_SETUP_APP = _STATIC / "setup-app"
 
 app.mount("/media", StaticFiles(directory=_MEDIA), name="media")
+app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 
 @app.get("/", response_class=FileResponse)
@@ -65,6 +67,9 @@ def root() -> FileResponse:
 
 @app.get("/setup", response_class=FileResponse)
 def setup_page() -> FileResponse:
+    setup_index = _SETUP_APP / "index.html"
+    if setup_index.exists():
+        return FileResponse(setup_index)
     return FileResponse(_STATIC / "setup.html")
 
 

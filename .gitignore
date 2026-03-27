@@ -11,3 +11,4 @@ test_ls.json
 *.mp4
 .claude/
 media/outreach_plan.md
+node_modules/
