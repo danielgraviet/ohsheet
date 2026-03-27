@@ -190,3 +190,13 @@ async def bulk_mark_seen(user_id: str, item_keys: list[str]) -> None:
         "INSERT INTO sync_items (user_id, item_key) VALUES ($1, $2) ON CONFLICT DO NOTHING",
         [(uid, k) for k in item_keys],
     )
+
+
+async def clear_sync_items(user_id: str) -> int:
+    """Delete all sync history for a user. Returns the number of rows deleted."""
+    pool = await get_pool()
+    result = await pool.execute(
+        "DELETE FROM sync_items WHERE user_id = $1", UUID(user_id)
+    )
+    # asyncpg returns "DELETE N" as a string
+    return int(result.split()[-1])

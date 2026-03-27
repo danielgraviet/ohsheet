@@ -44,6 +44,7 @@ export function App() {
   const [tools, setTools] = useState({ gas: 'Loading...', ls: '' });
   const [copyState, setCopyState] = useState('idle');
   const [lsCopyState, setLsCopyState] = useState('idle');
+  const [resetState, setResetState] = useState('idle');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -187,6 +188,20 @@ export function App() {
       setLsCopyState('error');
       window.setTimeout(() => setLsCopyState('idle'), 2000);
     }
+  }
+
+  async function resetSyncHistory() {
+    if (!window.confirm('This will clear your sync history. The next sync will re-insert all assignments into your sheet. Continue?')) {
+      return;
+    }
+    setResetState('loading');
+    try {
+      const { response } = await getJson('/api/sync/reset', { method: 'POST' });
+      setResetState(response.ok ? 'done' : 'error');
+    } catch {
+      setResetState('error');
+    }
+    window.setTimeout(() => setResetState('idle'), 3000);
   }
 
   const googleDone = Boolean(me.google_connected);
@@ -383,6 +398,26 @@ export function App() {
               </article>
             </div>
           )}
+
+          {setupReady ? (
+            <div className="danger-zone">
+              <p className="muted">Cleared your sheet and want to start fresh?</p>
+              <button
+                className="btn btn-danger"
+                type="button"
+                onClick={resetSyncHistory}
+                disabled={resetState === 'loading'}
+              >
+                {resetState === 'loading'
+                  ? 'Clearing...'
+                  : resetState === 'done'
+                    ? 'Cleared — sync again now'
+                    : resetState === 'error'
+                      ? 'Error — try again'
+                      : 'Reset Sync History'}
+              </button>
+            </div>
+          ) : null}
         </Card>
       </main>
     </div>
