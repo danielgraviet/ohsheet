@@ -323,29 +323,32 @@ async def get_ls_bookmarklet(ohsheet_session: Annotated[str | None, Cookie()] = 
     user = await require_user(ohsheet_session)
     token = user["sync_token"]
     api_url = f"{settings.app_base_url.rstrip('/')}/api/sync/learning-suite"
-    # Return the JS source so the setup page can render it as a bookmarklet href
-    
-    ## incorrect js. snippet. 
-    # this one below works. 
-    # javascript:!function(){if(!window.location.href.includes("learningsuite.byu.edu")){alert("SheetHappens: Not on a Learning Suite page.");return}alert("SheetHappens: Syncing... this will take a few seconds.");var n=new Date;n.setHours(0,0,0,0),fetch(window.location.href).then(function(n){return n.text()}).then(function(e){var t=function n(e,t){var i="var "+t+" = ",r=e.indexOf(i);if(-1===r)return null;for(r+=i.length;r<e.length&&"["!==e[r]&&"{"!==e[r];)r++;for(var s=0,o=!1,u=!1,a=r;r<e.length;r++){var c=e[r];if(u){u=!1;continue}if("\\"===c&&o){u=!0;continue}if('"'===c&&!o){o=!0;continue}if('"'===c&&o){o=!1;continue}if(!o){if("["===c||"{"===c)s++;else if(("]"===c||"}"===c)&&0==--s)return e.substring(a,r+1)}}return null}(e,"courseInformation");if(!t){alert("SheetHappens: Could not find courseInformation on this page.\nMake sure you are on the Schedule tab.");return}var i=JSON.parse(t);if(0===(i=i.map(function(e){return Object.assign({},e,{assignments:(e.assignments||[]).filter(function(e){return!!e.dueDate&&new Date(e.dueDate.replace(" ","T"))>=n})})})).reduce(function(n,e){return n+e.assignments.length},0)){alert("SheetHappens: No upcoming assignments found.");return}return fetch("https://ohsheet-production.up.railway.app/sync/learning-suite",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({courses:i,page_url:window.location.href})})}).then(function(n){if(!n||!n.ok)throw Error("HTTP "+(n?n.status:"no response"));return n.json()}).then(function(n){alert("SheetHappens sync complete!\n  Synced:   "+n.synced+"\n  Skipped:  "+n.skipped+" (already in sheet)\n  Failures: "+n.failures)}).catch(function(n){alert("SheetHappens sync failed: "+n)})}();
-    js = (
-        f"javascript:(function(){{"
-        f"var token='{token}';"
-        f"var url='{api_url}';"
-        f"var courses=[];"
-        f"document.querySelectorAll('.course-info').forEach(function(c){{"
-        f"var title=(c.querySelector('.course-title')||{{}}).innerText||'Unknown';"
-        f"var assignments=[];"
-        f"c.querySelectorAll('.assignment-row').forEach(function(a){{"
-        f"assignments.push({{id:a.dataset.id,name:(a.querySelector('.title')||{{}}).innerText||'',dueDate:(a.dataset.due||'')}});"
-        f"}});"
-        f"if(assignments.length)courses.push({{title:title,assignments:assignments}});"
-        f"}});"
-        f"if(!courses.length){{alert('OhSheet: No assignments found on this page.');return;}}"
-        f"fetch(url,{{method:'POST',headers:{{'Content-Type':'application/json'}},"
-        f"body:JSON.stringify({{token:token,courses:courses,page_url:location.href}})}}).then(function(r){{return r.json()}}).then(function(d){{alert('OhSheet: '+d.synced+' synced, '+d.skipped+' skipped')}}).catch(function(e){{alert('OhSheet error: '+e)}});"
-        f"}})();"
+    # Fetch the page HTML and parse courseInformation from the JS source —
+    # this is the approach that actually works on Learning Suite.
+    _TEMPLATE = (
+        'javascript:!function(){'
+        'if(!window.location.href.includes("learningsuite.byu.edu")){alert("OhSheet: Not on a Learning Suite page.");return}'
+        'alert("OhSheet: Syncing... this will take a few seconds.");'
+        'var n=new Date;n.setHours(0,0,0,0),'
+        'fetch(window.location.href).then(function(n){return n.text()}).then(function(e){'
+        'var t=function n(e,t){var i="var "+t+" = ",r=e.indexOf(i);if(-1===r)return null;'
+        'for(r+=i.length;r<e.length&&"["!==e[r]&&"{"!==e[r];)r++;'
+        'for(var s=0,o=!1,u=!1,a=r;r<e.length;r++){var c=e[r];'
+        'if(u){u=!1;continue}if("\\\\"===c&&o){u=!0;continue}'
+        'if(\'"\'===c&&!o){o=!0;continue}if(\'"\'===c&&o){o=!1;continue}'
+        'if(!o){if("["===c||"{"===c)s++;else if(("]"===c||"}"===c)&&0==--s)return e.substring(a,r+1)}}'
+        'return null}(e,"courseInformation");'
+        'if(!t){alert("OhSheet: Could not find courseInformation.\\nMake sure you are on the Schedule tab.");return}'
+        'var i=JSON.parse(t);'
+        'if(0===(i=i.map(function(e){return Object.assign({},e,{assignments:(e.assignments||[]).filter(function(e){return!!e.dueDate&&new Date(e.dueDate.replace(" ","T"))>=n})})})).reduce(function(n,e){return n+e.assignments.length},0))'
+        '{alert("OhSheet: No upcoming assignments found.");return}'
+        'return fetch("__URL__",{method:"POST",headers:{"Content-Type":"application/json"},'
+        'body:JSON.stringify({token:"__TOKEN__",courses:i,page_url:window.location.href})})'
+        '}).then(function(n){if(!n||!n.ok)throw Error("HTTP "+(n?n.status:"no response"));return n.json()})'
+        '.then(function(n){alert("OhSheet sync complete!\\n  Synced: "+n.synced+"\\n  Skipped: "+n.skipped)})'
+        '.catch(function(n){alert("OhSheet error: "+n)})}();'
     )
+    js = _TEMPLATE.replace("__URL__", api_url).replace("__TOKEN__", token)
     return {"js": js}
 
 
